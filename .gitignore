@@ -14,4 +14,4 @@ wheels/
 .env.*
 
 # Output
-output.jpg
+*.jpg

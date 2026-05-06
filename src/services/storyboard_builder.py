@@ -118,6 +118,7 @@ class StoryboardBuilder:
         environment: str,
         characters: list,
         panel_contexts: List[dict],
+        dialogues: List[dict]
     ) -> Image.Image:
         padding = 40
         # Clean input text
