@@ -33,7 +33,7 @@ class DataFetcher:
             with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
                 # 1. Fetch project info
                 cur.execute(
-                    "SELECT movie_idea, art_style, characters FROM cinedual_projects WHERE user_email = %s AND session_timestamp = %s",
+                    "SELECT movie_idea, art_style, characters, non_characters FROM cinedual_projects WHERE user_email = %s AND session_timestamp = %s",
                     (user_email, project_id)
                 )
                 proj = cur.fetchone()
@@ -45,6 +45,10 @@ class DataFetcher:
                 
                 # Keep full character list for detailed display
                 chars_list = proj['characters'] or []
+                
+                # Extract non_characters as environment details
+                non_chars_list = proj['non_characters'] or []
+                env_str = ", ".join([c.get('name', 'Unknown') for c in non_chars_list]) if non_chars_list else "Not specified"
                 
                 # 2. Fetch panels
                 cur.execute(
@@ -63,6 +67,7 @@ class DataFetcher:
                 return {
                     "movie_idea": movie_idea,
                     "art_style": art_style,
+                    "environment": env_str,
                     "characters": chars_list,
                     "panels": panels
                 }

@@ -71,13 +71,17 @@ async def process_storyboard(req: StoryboardRequest) -> BytesIO:
         except Exception as e:
             print(f"Warning: Failed to fetch character images: {e}")
 
-    # 4. Generate Dialogue
-    dialogues = await dialogue_generator.generate_dialogue(
+    # 4. Generate Dialogue & Environment
+    gemini_data = await dialogue_generator.generate_dialogue(
+        frames,
         movie_idea,
         art_style,
         characters,
         panels
     )
+    
+    environment = gemini_data.get("environment", "Unknown Environment")
+    dialogues = gemini_data.get("panels", [])
 
     # 5. Build Storyboard
     canvas = await loop.run_in_executor(
@@ -87,6 +91,7 @@ async def process_storyboard(req: StoryboardRequest) -> BytesIO:
         character_images,
         movie_idea,
         art_style,
+        environment,
         characters,
         panels,
         dialogues
