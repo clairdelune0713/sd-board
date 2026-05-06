@@ -21,61 +21,74 @@ from src.config import config
 
 app = FastAPI(title="SD Board API", description="Generates 4K Storyboards")
 
-class PanelInput(BaseModel):
-    camera: str
-    action: str
-    frame_url: str  # Can be a public http URL or an R2 object key
-
 class StoryboardRequest(BaseModel):
-    movie_idea: str
-    art_style: str
-    characters: str
-    panels: List[PanelInput]
+    user_email: str
+    project: str
+    storyboard_number: int
 
 async def process_storyboard(req: StoryboardRequest) -> BytesIO:
-    if len(req.panels) != 4:
-        raise ValueError("Exactly 4 panels are required.")
+    # 1. Fetch metadata from Supabase
+    db_data = data_fetcher.fetch_storyboard_data(req.user_email, req.project, req.storyboard_number)
+    
+    movie_idea = db_data['movie_idea']
+    art_style = db_data['art_style']
+    characters = db_data['characters']
+    panels = db_data['panels']
+    
+    if len(panels) != 4:
+        raise ValueError(f"Expected 4 panels, got {len(panels)}")
 
-    # 1. Fetch images concurrently
-    async def fetch_image(url: str):
-        if url.startswith("http://") or url.startswith("https://"):
-            return await data_fetcher.download_image_from_url(url)
-        else:
-            # Assume it's an R2 key in the default bucket
-            # Run the synchronous boto3 call in an executor to avoid blocking
-            bucket = "aifx-studio"  # Default bucket from .env S3_BUCKET_R2
-            loop = asyncio.get_event_loop()
-            return await loop.run_in_executor(
-                None, 
-                data_fetcher.download_image_from_r2, 
-                bucket, 
-                url
-            )
+    bucket = config.S3_BUCKET_R2 if hasattr(config, 'S3_BUCKET_R2') else "aifx-studio"
+    if not bucket:
+        bucket = "aifx-studio"
+    
+    loop = asyncio.get_event_loop()
 
+    # 2. Fetch frames from R2
+    # aifx-studio/movie-script/{user_email}/{project}/storyboard-{sb_num}-grid-{i}.png
+    # Wait, the R2 bucket name in .env is `aifx-studio`. 
+    # The path is `movie-script/{user_email}/{project}/...`
+    # The user said "aifx-studio/movie-script/..." implying bucket is `aifx-studio` and prefix is `movie-script/...`
+    base_prefix = f"movie-script/{req.user_email}/{req.project}"
+    
+    async def fetch_r2_image(key: str):
+        return await loop.run_in_executor(None, data_fetcher.download_image_from_r2, bucket, key)
+        
+    frame_keys = [f"{base_prefix}/storyboard-{req.storyboard_number}-grid-{i}.png" for i in range(1, 5)]
     try:
-        frames = await asyncio.gather(*[fetch_image(p.frame_url) for p in req.panels])
+        frames = await asyncio.gather(*[fetch_r2_image(key) for key in frame_keys])
     except Exception as e:
-        raise ValueError(f"Failed to fetch images: {e}")
+        raise ValueError(f"Failed to fetch frames: {e}")
 
-    # 2. Generate Dialogue
-    contexts = [{"camera": p.camera, "action": p.action} for p in req.panels]
+    # 3. Fetch character images from R2 inputs/ folder
+    inputs_prefix = f"{base_prefix}/inputs/"
+    character_keys = await loop.run_in_executor(None, data_fetcher.list_r2_objects, bucket, inputs_prefix)
+    
+    character_images = []
+    if character_keys:
+        try:
+            character_images = await asyncio.gather(*[fetch_r2_image(k) for k in character_keys])
+        except Exception as e:
+            print(f"Warning: Failed to fetch character images: {e}")
+
+    # 4. Generate Dialogue
     dialogues = await dialogue_generator.generate_dialogue(
-        req.movie_idea,
-        req.art_style,
-        req.characters,
-        contexts
+        movie_idea,
+        art_style,
+        characters,
+        panels
     )
 
-    # 3. Build Storyboard
-    loop = asyncio.get_event_loop()
+    # 5. Build Storyboard
     canvas = await loop.run_in_executor(
         None,
         storyboard_builder.build_storyboard,
         frames,
-        req.movie_idea,
-        req.art_style,
-        req.characters,
-        contexts,
+        character_images,
+        movie_idea,
+        art_style,
+        characters,
+        panels,
         dialogues
     )
 

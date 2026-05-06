@@ -18,40 +18,65 @@ class DataFetcher:
             config=BotoConfig(signature_version='s3v4'),
             region_name='auto'
         )
-        self.db_url = config.DATABASE_URL
+        self.db_url = config.DATABASE_URL.replace("?pgbouncer=true", "")
 
     def get_db_connection(self):
         """Returns a new psycopg2 connection to Supabase."""
         return psycopg2.connect(self.db_url)
 
-    def fetch_storyboard_data(self, storyboard_id: str):
+    def fetch_storyboard_data(self, user_email: str, project_id: str, storyboard_number: int):
         """
         Fetches the storyboard metadata (movie_idea, art_style, characters) 
         and the 4 panel contexts from Supabase.
         """
-        # Placeholder SQL - replace with your actual schema
-        # Expected return:
-        # {
-        #   "movie_idea": "...",
-        #   "art_style": "...",
-        #   "characters": "...",
-        #   "panels": [
-        #       {"frame_url": "...", "camera": "...", "action": "..."}
-        #   ]
-        # }
-        
         with self.get_db_connection() as conn:
             with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
-                # Example query:
-                # cur.execute("SELECT * FROM storyboards WHERE id = %s", (storyboard_id,))
-                # storyboard = cur.fetchone()
-                # cur.execute("SELECT * FROM panels WHERE storyboard_id = %s ORDER BY sequence", (storyboard_id,))
-                # panels = cur.fetchall()
-                pass
+                # 1. Fetch project info
+                cur.execute(
+                    "SELECT movie_idea, art_style, characters FROM cinedual_projects WHERE user_email = %s AND session_timestamp = %s",
+                    (user_email, project_id)
+                )
+                proj = cur.fetchone()
+                if not proj:
+                    raise ValueError(f"Project not found for {user_email} and {project_id}")
                 
-        # Since we don't have the exact schema, this raises a NotImplementedError.
-        # Please adjust the SQL queries above.
-        raise NotImplementedError("Please implement the exact SQL queries in data_fetcher.py to match your Supabase schema.")
+                movie_idea = proj['movie_idea']
+                art_style = proj['art_style']
+                
+                # Keep full character list for detailed display
+                chars_list = proj['characters'] or []
+                
+                # 2. Fetch panels
+                cur.execute(
+                    "SELECT angle, content FROM scenes_content WHERE user_email = %s AND project_id = %s AND scene = %s AND panel IS NOT NULL AND name NOT LIKE '%%-original' ORDER BY panel LIMIT 4",
+                    (user_email, project_id, storyboard_number)
+                )
+                panels_db = cur.fetchall()
+                
+                panels = []
+                for p in panels_db:
+                    panels.append({
+                        "camera": p['angle'] or "Unknown Angle",
+                        "raw_content": p['content'] or ""
+                    })
+                    
+                return {
+                    "movie_idea": movie_idea,
+                    "art_style": art_style,
+                    "characters": chars_list,
+                    "panels": panels
+                }
+
+    def list_r2_objects(self, bucket: str, prefix: str) -> list[str]:
+        """Lists object keys in an R2 bucket under a specific prefix."""
+        try:
+            response = self.s3_client.list_objects_v2(Bucket=bucket, Prefix=prefix)
+            if 'Contents' in response:
+                return [obj['Key'] for obj in response['Contents'] if not obj['Key'].endswith('/')]
+            return []
+        except Exception as e:
+            print(f"Error listing objects in {bucket}/{prefix}: {e}")
+            return []
 
     def download_image_from_r2(self, bucket: str, object_key: str) -> Image.Image:
         """Downloads an image from Cloudflare R2 and returns a PIL Image."""

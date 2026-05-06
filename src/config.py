@@ -14,6 +14,7 @@ class Config:
     S3_ACCESS_KEY = os.getenv("S3_ACCESS_KEY", "")
     S3_SECRET_KEY = os.getenv("S3_SECRET_KEY", "")
     S3_PUBLIC_URL = os.getenv("S3_PUBLIC_URL", "")
+    S3_BUCKET_R2 = os.getenv("S3_BUCKET_R2", "aifx-studio")
     
     # DB Configuration
     DATABASE_URL = os.getenv("DATABASE_URL", "")

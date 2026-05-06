@@ -18,9 +18,9 @@ class StoryboardBuilder:
                 font_path = "/Library/Fonts/Arial.ttf"
             
             self.font_title = ImageFont.truetype(font_path, 64)
-            self.font_subtitle = ImageFont.truetype(font_path, 48)
-            self.font_body = ImageFont.truetype(font_path, 36)
-            self.font_dialogue = ImageFont.truetype(font_path, 40)
+            self.font_subtitle = ImageFont.truetype(font_path, 44)
+            self.font_body = ImageFont.truetype(font_path, 32)
+            self.font_dialogue = ImageFont.truetype(font_path, 36)
         except Exception:
             # Fallback (will be very small on 4K)
             self.font_title = ImageFont.load_default()
@@ -62,58 +62,94 @@ class StoryboardBuilder:
             y += (bbox[3] - bbox[1]) + 10 # line height + padding
         return y # return next available y
 
-    def _resize_and_crop(self, img: Image.Image, target_width: int, target_height: int) -> Image.Image:
-        """Resize and crop image to fill the target dimensions (cover)."""
+    def _resize_and_pad(self, img: Image.Image, target_width: int, target_height: int) -> Image.Image:
+        """Resize and pad image to fit the target dimensions without cropping (letterbox)."""
         aspect_img = img.width / img.height
         aspect_target = target_width / target_height
         
         if aspect_img > aspect_target:
-            # Image is wider than target
-            new_height = target_height
-            new_width = int(new_height * aspect_img)
-        else:
-            # Image is taller than target
+            # Image is wider, scale to target width
             new_width = target_width
             new_height = int(new_width / aspect_img)
+        else:
+            # Image is taller, scale to target height
+            new_height = target_height
+            new_width = int(new_height * aspect_img)
             
         img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
         
-        # Center crop
-        left = (new_width - target_width) / 2
-        top = (new_height - target_height) / 2
-        right = (new_width + target_width) / 2
-        bottom = (new_height + target_height) / 2
+        # Paste into padded background
+        new_img = Image.new("RGB", (target_width, target_height), (0, 0, 0))
+        left = (target_width - new_width) // 2
+        top = (target_height - new_height) // 2
+        new_img.paste(img, (left, top))
         
-        return img.crop((left, top, right, bottom))
+        return new_img
 
     def build_storyboard(
         self,
         frames: List[Image.Image],
+        character_images: List[Image.Image],
         movie_idea: str,
         art_style: str,
-        characters: str,
-        panel_contexts: List[str],
-        dialogues: List[str]
+        characters: list,
+        panel_contexts: List[dict],
+        dialogues: List[dict]
     ) -> Image.Image:
         """Assembles the 4K storyboard."""
         canvas = Image.new("RGB", (self.width, self.height), self.bg_color)
         draw = ImageDraw.Draw(canvas)
         
         # 1. Draw Header
-        header_height = 250
+        header_height = 350
         padding = 40
         draw.rectangle([0, 0, self.width, header_height], fill=(30, 30, 30))
         
         y = padding
         draw.text((padding, y), f"Movie Idea: {movie_idea}", font=self.font_title, fill=self.text_color)
         y += 80
-        draw.text((padding, y), f"Art Style: {art_style}   |   Characters: {characters}", font=self.font_subtitle, fill=self.accent_color)
+        draw.text((padding, y), f"Art Style: {art_style}", font=self.font_subtitle, fill=self.accent_color)
+        
+        # Draw Character Images and Info on the right side of the header
+        if characters:
+            char_size = 170
+            char_padding = 20
+            # We assume character_images order matches characters list
+            total_chars = len(characters)
+            # Allocate space on the right (e.g. 1500px)
+            block_width = 1500
+            start_x = self.width - padding - block_width
+            start_y = 20
+            
+            draw.text((start_x, start_y), "Characters", font=self.font_subtitle, fill=self.accent_color)
+            
+            curr_x = start_x
+            curr_y = start_y + 60
+            
+            for idx, char_info in enumerate(characters):
+                if idx < len(character_images):
+                    char_img = character_images[idx]
+                    resized_char = self._resize_and_pad(char_img, char_size, char_size)
+                    canvas.paste(resized_char, (int(curr_x), int(curr_y)))
+                
+                text_x = curr_x + char_size + 20
+                name = char_info.get('name', 'Unknown')
+                desc = char_info.get('description', '')
+                
+                # Truncate description if too long
+                if len(desc) > 120:
+                    desc = desc[:117] + "..."
+                
+                draw.text((text_x, curr_y), name, font=self.font_body, fill=self.text_color)
+                self._draw_text_wrapped(draw, desc, (text_x, curr_y + 50), self.font_body, block_width // total_chars - char_size - 30, fill=(200, 200, 200))
+                
+                curr_x += block_width // total_chars
         
         # 2. Draw Panels (2x2 Grid)
         panel_width = (self.width - 3 * padding) // 2
         panel_height = (self.height - header_height - 3 * padding) // 2
         
-        image_height = int(panel_height * 0.75)
+        image_height = int(panel_height * 0.55)
         text_height = panel_height - image_height
         
         positions = [
@@ -131,7 +167,7 @@ class StoryboardBuilder:
             
             # Place Image
             if i < len(frames):
-                frame_img = self._resize_and_crop(frames[i], panel_width - 8, image_height - 8)
+                frame_img = self._resize_and_pad(frames[i], panel_width - 8, image_height - 8)
                 canvas.paste(frame_img, (x + 4, y_start + 4))
             
             # Place Text
@@ -141,10 +177,11 @@ class StoryboardBuilder:
             
             # Text payload now contains dicts with camera, action, dialogue
             panel_data = panel_contexts[i] if i < len(panel_contexts) else {}
+            dialogue_data = dialogues[i] if i < len(dialogues) else {}
             
             camera = panel_data.get('camera', 'No camera info')
-            action = panel_data.get('action', 'No action info')
-            dialogue = dialogues[i] if i < len(dialogues) else ""
+            action = dialogue_data.get('action', 'No action generated')
+            dialogue = dialogue_data.get('dialogue', 'No dialogue generated')
             
             draw.text((text_x, text_y), f"Panel {i+1}", font=self.font_subtitle, fill=self.accent_color)
             text_y += 50

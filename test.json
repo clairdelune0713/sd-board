@@ -1,27 +1,5 @@
 {
-  "movie_idea": "A gritty detective tries to solve a case in a cyberpunk city.",
-  "art_style": "Cyberpunk, Neon lighting, Noir",
-  "characters": "Detective Vance (trench coat, cybernetic eye), Informant Jax",
-  "panels": [
-    {
-      "camera": "Wide shot, low angle",
-      "action": "Vance standing in the rain looking at a neon sign.",
-      "frame_url": "https://picsum.photos/1920/1080"
-    },
-    {
-      "camera": "Over the shoulder",
-      "action": "Vance interrogates Jax in a dark alley.",
-      "frame_url": "https://picsum.photos/1920/1080"
-    },
-    {
-      "camera": "Extreme close up",
-      "action": "A close up of Vance's cybernetic eye glowing.",
-      "frame_url": "https://picsum.photos/1920/1080"
-    },
-    {
-      "camera": "Long shot, tracking",
-      "action": "Vance walks away into the fog.",
-      "frame_url": "https://picsum.photos/1920/1080"
-    }
-  ]
+  "user_email": "clairdelune0713@gmail.com",
+  "project": "20260504-1254-A",
+  "storyboard_number": 1
 }
