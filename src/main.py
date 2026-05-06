@@ -8,6 +8,12 @@ from pydantic import BaseModel
 from io import BytesIO
 import uvicorn
 
+import sys
+from pathlib import Path
+
+# Add project root to sys.path so 'src' module can be found
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from src.services.data_fetcher import data_fetcher
 from src.services.dialogue_generator import dialogue_generator
 from src.services.storyboard_builder import storyboard_builder
