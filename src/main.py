@@ -15,7 +15,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.services.data_fetcher import data_fetcher
-from src.services.dialogue_generator import dialogue_generator
 from src.services.storyboard_builder import storyboard_builder
 from src.config import config
 
@@ -54,7 +53,7 @@ async def process_storyboard(req: StoryboardRequest) -> BytesIO:
     async def fetch_r2_image(key: str):
         return await loop.run_in_executor(None, data_fetcher.download_image_from_r2, bucket, key)
         
-    frame_keys = [f"{base_prefix}/storyboard-{req.storyboard_number}-grid-{i}.png" for i in range(1, 5)]
+    frame_keys = [f"{base_prefix}/boards/board-{req.storyboard_number}-{i}.png" for i in range(1, 5)]
     try:
         frames = await asyncio.gather(*[fetch_r2_image(key) for key in frame_keys])
     except Exception as e:
@@ -71,17 +70,9 @@ async def process_storyboard(req: StoryboardRequest) -> BytesIO:
         except Exception as e:
             print(f"Warning: Failed to fetch character images: {e}")
 
-    # 4. Generate Dialogue & Environment
-    gemini_data = await dialogue_generator.generate_dialogue(
-        frames,
-        movie_idea,
-        art_style,
-        characters,
-        panels
-    )
-    
-    environment = gemini_data.get("environment", "Unknown Environment")
-    dialogues = gemini_data.get("panels", [])
+    # 4. Use action/dialogue from DB instead of generating with Gemini
+    environment = db_data.get("environment", "Unknown Environment")
+    dialogues = db_data.get("panels", []) # These now contain action and dialogue from DB
 
     # 5. Build Storyboard
     canvas = await loop.run_in_executor(

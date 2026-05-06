@@ -50,24 +50,38 @@ class DataFetcher:
                 non_chars_list = proj['non_characters'] or []
                 env_str = ", ".join([c.get('name', 'Unknown') for c in non_chars_list]) if non_chars_list else "Not specified"
                 
-                # 2. Fetch panels
+                # 2. Fetch panels context (camera info)
                 cur.execute(
-                    "SELECT angle, content FROM scenes_content WHERE user_email = %s AND project_id = %s AND scene = %s AND panel IS NOT NULL AND name NOT LIKE '%%-original' ORDER BY panel LIMIT 4",
+                    "SELECT panel, angle, content FROM scenes_content WHERE user_email = %s AND project_id = %s AND scene = %s AND panel IS NOT NULL AND name NOT LIKE '%%-original' ORDER BY panel LIMIT 4",
                     (user_email, project_id, storyboard_number)
                 )
                 panels_db = cur.fetchall()
                 
+                # 3. Fetch actions and dialogues
+                cur.execute(
+                    "SELECT panel, action_text, dialogue_text FROM cine_action_dialogues WHERE user_email = %s AND project_id = %s AND scene = %s ORDER BY panel LIMIT 4",
+                    (user_email, project_id, storyboard_number)
+                )
+                dialogues_db = cur.fetchall()
+                dialogue_map = {d['panel']: d for d in dialogues_db}
+                
+                # Environment description: Use Panel 0's action_text if available
+                env_desc = dialogue_map.get(0, {}).get('action_text', env_str)
+                
                 panels = []
                 for p in panels_db:
+                    panel_idx = p['panel']
+                    d_info = dialogue_map.get(panel_idx, {})
                     panels.append({
                         "camera": p['angle'] or "Unknown Angle",
-                        "raw_content": p['content'] or ""
+                        "action": d_info.get('action_text', p['content'] or ""),
+                        "dialogue": d_info.get('dialogue_text', "")
                     })
                     
                 return {
                     "movie_idea": movie_idea,
                     "art_style": art_style,
-                    "environment": env_str,
+                    "environment": env_desc,
                     "characters": chars_list,
                     "panels": panels
                 }

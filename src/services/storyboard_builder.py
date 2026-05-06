@@ -1,4 +1,5 @@
 import os
+import re
 from PIL import Image, ImageDraw, ImageFont
 from typing import List
 
@@ -10,23 +11,50 @@ class StoryboardBuilder:
         self.text_color = (240, 240, 240)
         self.accent_color = (100, 150, 255)
         
-        # Try to load a nice font, fallback to default
+        # Regex to clean character tags like @John_Doe-0231 -> John Doe
+        self.char_tag_pattern = re.compile(r'@([a-zA-Z0-9_]+)-\d{4}')
+        
+        # Try to load a Japanese-compatible font, fallback to default
         try:
-            # Common path for Arial on macOS
-            font_path = "/System/Library/Fonts/Supplemental/Arial.ttf"
-            if not os.path.exists(font_path):
-                font_path = "/Library/Fonts/Arial.ttf"
+            # Common paths for multi-language fonts on macOS
+            font_paths = [
+                "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
+                "/System/Library/Fonts/PingFang.ttc",
+                "/System/Library/Fonts/Hiragino Sans GB.ttc",
+                "/System/Library/Fonts/AppleSDGothicNeo.ttc",
+                "/System/Library/Fonts/Supplemental/Arial.ttf" # Fallback
+            ]
+            
+            font_path = None
+            for path in font_paths:
+                if os.path.exists(path):
+                    font_path = path
+                    break
+            
+            if not font_path:
+                font_path = "arial.ttf" # Last resort
             
             self.font_title = ImageFont.truetype(font_path, 64)
             self.font_subtitle = ImageFont.truetype(font_path, 44)
             self.font_body = ImageFont.truetype(font_path, 32)
             self.font_dialogue = ImageFont.truetype(font_path, 36)
         except Exception:
-            # Fallback (will be very small on 4K)
+            # Fallback
             self.font_title = ImageFont.load_default()
             self.font_subtitle = ImageFont.load_default()
             self.font_body = ImageFont.load_default()
             self.font_dialogue = ImageFont.load_default()
+
+    def _clean_text(self, text: str) -> str:
+        """Cleans character tags like @John_Doe-0231 -> John Doe."""
+        if not text or not isinstance(text, str):
+            return text
+            
+        def replacement(match):
+            name = match.group(1)
+            return name.replace('_', ' ')
+            
+        return self.char_tag_pattern.sub(replacement, text)
 
     def _wrap_text(self, text: str, font, max_width: int, draw: ImageDraw.Draw) -> List[str]:
         words = text.split()
@@ -90,9 +118,12 @@ class StoryboardBuilder:
         environment: str,
         characters: list,
         panel_contexts: List[dict],
-        dialogues: List[dict]
     ) -> Image.Image:
         padding = 40
+        # Clean input text
+        movie_idea = self._clean_text(movie_idea)
+        art_style = self._clean_text(art_style)
+        environment = self._clean_text(environment)
         
         # --- 1. BUILD HEADER DYNAMICALLY ---
         header_canvas = Image.new("RGB", (self.width, 4000), (30, 30, 30))
@@ -128,8 +159,8 @@ class StoryboardBuilder:
                     header_canvas.paste(resized_char, (int(curr_x), int(curr_y)))
                 
                 text_x = curr_x + char_size + 30
-                name = char_info.get('name', 'Unknown')
-                desc = char_info.get('description', '')
+                name = self._clean_text(char_info.get('name', 'Unknown'))
+                desc = self._clean_text(char_info.get('description', ''))
                 
                 header_draw.text((text_x, curr_y), name, font=self.font_body, fill=self.text_color)
                 text_y = self._draw_text_wrapped(header_draw, desc, (text_x, curr_y + 60), self.font_body, block_width - char_size - 50, fill=(200, 200, 200))
@@ -168,16 +199,17 @@ class StoryboardBuilder:
             dialogue_data = dialogues[i] if i < len(dialogues) else {}
             
             camera = panel_data.get('camera', 'No camera info')
-            action = dialogue_data.get('action', 'No action generated')
-            dialogue = dialogue_data.get('dialogue', 'No dialogue generated')
+            action = self._clean_text(dialogue_data.get('action', 'No action generated'))
+            dialogue = self._clean_text(dialogue_data.get('dialogue', 'No dialogue generated'))
             
             panel_draw.text((text_x, text_y), f"Panel {i+1}", font=self.font_subtitle, fill=self.accent_color)
             text_y += 50
             text_y = self._draw_text_wrapped(panel_draw, f"Camera: {camera}", (text_x, text_y), self.font_body, max_text_width, fill=(150, 255, 150))
             text_y += 10
             text_y = self._draw_text_wrapped(panel_draw, f"Action: {action}", (text_x, text_y), self.font_body, max_text_width, fill=self.text_color)
-            text_y += 10
-            text_y = self._draw_text_wrapped(panel_draw, f"Dialogue: {dialogue}", (text_x, text_y), self.font_dialogue, max_text_width, fill=(200, 200, 255))
+            panel_draw.text((text_x, text_y), "Dialogue:", font=self.font_subtitle, fill=self.accent_color)
+            text_y += 50
+            text_y = self._draw_text_wrapped(panel_draw, dialogue, (text_x, text_y), self.font_dialogue, max_text_width, fill=(200, 200, 255))
             
             panel_height = text_y + 20
             panel_canvas = panel_canvas.crop((0, 0, panel_width, panel_height))
