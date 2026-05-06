@@ -27,11 +27,12 @@ class DialogueGenerator:
         Art Style: {art_style}
         Characters: {characters}
         
-        Here are the descriptions (contexts) for the {len(panel_contexts)} panels:
+        Here are the descriptions (actions/camera) for the {len(panel_contexts)} panels:
         """
         
         for i, context in enumerate(panel_contexts):
-            prompt += f"\nPanel {i + 1} Context: {context}"
+            action = context.get('action', '')
+            prompt += f"\nPanel {i + 1} Action: {action}"
             
         prompt += """
         

@@ -4,19 +4,23 @@
   "characters": "Detective Vance (trench coat, cybernetic eye), Informant Jax",
   "panels": [
     {
-      "context": "Vance standing in the rain looking at a neon sign.",
+      "camera": "Wide shot, low angle",
+      "action": "Vance standing in the rain looking at a neon sign.",
       "frame_url": "https://picsum.photos/1920/1080"
     },
     {
-      "context": "Vance interrogates Jax in a dark alley.",
+      "camera": "Over the shoulder",
+      "action": "Vance interrogates Jax in a dark alley.",
       "frame_url": "https://picsum.photos/1920/1080"
     },
     {
-      "context": "A close up of Vance's cybernetic eye glowing.",
+      "camera": "Extreme close up",
+      "action": "A close up of Vance's cybernetic eye glowing.",
       "frame_url": "https://picsum.photos/1920/1080"
     },
     {
-      "context": "Vance walks away into the fog.",
+      "camera": "Long shot, tracking",
+      "action": "Vance walks away into the fog.",
       "frame_url": "https://picsum.photos/1920/1080"
     }
   ]

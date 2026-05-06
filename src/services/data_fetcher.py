@@ -4,6 +4,8 @@ from botocore.exceptions import ClientError
 from io import BytesIO
 from PIL import Image
 import httpx
+import psycopg2
+import psycopg2.extras
 from src.config import config
 
 class DataFetcher:
@@ -16,6 +18,40 @@ class DataFetcher:
             config=BotoConfig(signature_version='s3v4'),
             region_name='auto'
         )
+        self.db_url = config.DATABASE_URL
+
+    def get_db_connection(self):
+        """Returns a new psycopg2 connection to Supabase."""
+        return psycopg2.connect(self.db_url)
+
+    def fetch_storyboard_data(self, storyboard_id: str):
+        """
+        Fetches the storyboard metadata (movie_idea, art_style, characters) 
+        and the 4 panel contexts from Supabase.
+        """
+        # Placeholder SQL - replace with your actual schema
+        # Expected return:
+        # {
+        #   "movie_idea": "...",
+        #   "art_style": "...",
+        #   "characters": "...",
+        #   "panels": [
+        #       {"frame_url": "...", "camera": "...", "action": "..."}
+        #   ]
+        # }
+        
+        with self.get_db_connection() as conn:
+            with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
+                # Example query:
+                # cur.execute("SELECT * FROM storyboards WHERE id = %s", (storyboard_id,))
+                # storyboard = cur.fetchone()
+                # cur.execute("SELECT * FROM panels WHERE storyboard_id = %s ORDER BY sequence", (storyboard_id,))
+                # panels = cur.fetchall()
+                pass
+                
+        # Since we don't have the exact schema, this raises a NotImplementedError.
+        # Please adjust the SQL queries above.
+        raise NotImplementedError("Please implement the exact SQL queries in data_fetcher.py to match your Supabase schema.")
 
     def download_image_from_r2(self, bucket: str, object_key: str) -> Image.Image:
         """Downloads an image from Cloudflare R2 and returns a PIL Image."""

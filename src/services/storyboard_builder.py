@@ -139,16 +139,19 @@ class StoryboardBuilder:
             text_y = y_start + image_height + 20
             max_text_width = panel_width - 40
             
-            context = panel_contexts[i] if i < len(panel_contexts) else "No context provided."
+            # Text payload now contains dicts with camera, action, dialogue
+            panel_data = panel_contexts[i] if i < len(panel_contexts) else {}
+            
+            camera = panel_data.get('camera', 'No camera info')
+            action = panel_data.get('action', 'No action info')
             dialogue = dialogues[i] if i < len(dialogues) else ""
             
-            # Context
             draw.text((text_x, text_y), f"Panel {i+1}", font=self.font_subtitle, fill=self.accent_color)
-            text_y += 60
-            text_y = self._draw_text_wrapped(draw, f"Context: {context}", (text_x, text_y), self.font_body, max_text_width, fill=self.text_color)
-            
-            # Dialogue
-            text_y += 20
+            text_y += 50
+            text_y = self._draw_text_wrapped(draw, f"Camera: {camera}", (text_x, text_y), self.font_body, max_text_width, fill=(150, 255, 150))
+            text_y += 10
+            text_y = self._draw_text_wrapped(draw, f"Action: {action}", (text_x, text_y), self.font_body, max_text_width, fill=self.text_color)
+            text_y += 10
             self._draw_text_wrapped(draw, f"Dialogue: {dialogue}", (text_x, text_y), self.font_dialogue, max_text_width, fill=(200, 200, 255))
 
         return canvas

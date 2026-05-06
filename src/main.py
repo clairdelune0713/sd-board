@@ -16,7 +16,8 @@ from src.config import config
 app = FastAPI(title="SD Board API", description="Generates 4K Storyboards")
 
 class PanelInput(BaseModel):
-    context: str
+    camera: str
+    action: str
     frame_url: str  # Can be a public http URL or an R2 object key
 
 class StoryboardRequest(BaseModel):
@@ -51,7 +52,7 @@ async def process_storyboard(req: StoryboardRequest) -> BytesIO:
         raise ValueError(f"Failed to fetch images: {e}")
 
     # 2. Generate Dialogue
-    contexts = [p.context for p in req.panels]
+    contexts = [{"camera": p.camera, "action": p.action} for p in req.panels]
     dialogues = await dialogue_generator.generate_dialogue(
         req.movie_idea,
         req.art_style,
