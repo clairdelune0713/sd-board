@@ -2,7 +2,7 @@ services:
   sd-board:
     build: .
     ports:
-      - "8005:8005"
+      - "127.0.0.1:35014:8005"
     env_file:
       - .env
     volumes:
