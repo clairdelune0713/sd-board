@@ -18,6 +18,9 @@ class StoryboardBuilder:
         try:
             # Common paths for multi-language fonts on macOS
             font_paths = [
+                "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+                "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
                 "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
                 "/System/Library/Fonts/PingFang.ttc",
                 "/System/Library/Fonts/Hiragino Sans GB.ttc",
