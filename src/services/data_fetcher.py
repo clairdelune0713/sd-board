@@ -80,16 +80,17 @@ class DataFetcher:
                     
                 # 4. Fetch environment info to find the 'i' for env-i.png
                 cur.execute(
-                    "SELECT scenes FROM project_environments WHERE user_email = %s AND project_id = %s ORDER BY created_at",
+                    "SELECT scenes, category_index FROM project_environments WHERE user_email = %s AND project_id = %s ORDER BY category_index",
                     (user_email, project_id)
                 )
                 envs_db = cur.fetchall()
                 
                 env_index = 1 # Fallback
-                for idx, env_row in enumerate(envs_db):
+                for env_row in envs_db:
                     # env_row['scenes'] is an ARRAY of integers
                     if storyboard_number in (env_row['scenes'] or []):
-                        env_index = idx + 1
+                        # Use category_index (usually 1, 2, 3...) directly for the image name
+                        env_index = env_row['category_index'] if env_row['category_index'] is not None else 1
                         break
                 
                 env_image_key = f"movie-script/{user_email}/{project_id}/boards/env-{env_index}.png"

@@ -226,7 +226,7 @@ class StoryboardBuilder:
         env_display_height = int(env_display_width * 9 / 21)
         resized_env = self._resize_and_pad(env_image, env_display_width, env_display_height)
         
-        env_caption = "Note: This image is the master image (not first frame) for general idea reference (to provide a better understanding of character and object positioning). The bird's eye view is used for environment consistency."
+        env_caption = "Note: This image is the master image (not first frame) for general idea reference (to provide a better understanding of character and object positioning). The floor plan is used for environment consistency."
         
         # --- 4. ASSEMBLE FINAL CANVAS ---
         row1_height = max(built_panels[0].height, built_panels[1].height) if len(built_panels) > 1 else built_panels[0].height
