@@ -132,4 +132,18 @@ class DataFetcher:
             response.raise_for_status()
             return Image.open(BytesIO(response.content)).convert("RGB")
 
+    def upload_image_to_r2(self, bucket: str, object_key: str, image_data: bytes, content_type: str = "image/png"):
+        """Uploads image data to Cloudflare R2."""
+        try:
+            self.s3_client.put_object(
+                Bucket=bucket,
+                Key=object_key,
+                Body=image_data,
+                ContentType=content_type
+            )
+            print(f"Successfully uploaded to {bucket}/{object_key}")
+        except Exception as e:
+            print(f"Error uploading to {bucket}/{object_key}: {e}")
+            raise
+
 data_fetcher = DataFetcher()

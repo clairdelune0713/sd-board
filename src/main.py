@@ -92,11 +92,20 @@ async def process_storyboard(req: StoryboardRequest) -> BytesIO:
         dialogues
     )
 
-    # 4. Save to BytesIO
-    output = BytesIO()
-    canvas.save(output, format="JPEG", quality=90)
-    output.seek(0)
-    return output
+    # 4. Save to BytesIO for response (JPEG)
+    output_jpeg = BytesIO()
+    canvas.save(output_jpeg, format="JPEG", quality=90)
+    output_jpeg.seek(0)
+
+    # 5. Save and Upload to R2 (PNG)
+    output_png = BytesIO()
+    canvas.save(output_png, format="PNG")
+    png_data = output_png.getvalue()
+    
+    r2_key = f"movie-script/{req.user_email}/{req.project}/boards/comp-{req.storyboard_number}.png"
+    await loop.run_in_executor(None, data_fetcher.upload_image_to_r2, bucket, r2_key, png_data, "image/png")
+
+    return output_jpeg
 
 
 @app.post("/generate-storyboard", responses={200: {"content": {"image/jpeg": {}}}})
