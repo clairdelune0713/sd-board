@@ -55,9 +55,12 @@ async def process_storyboard(req: StoryboardRequest) -> BytesIO:
         
     frame_keys = [f"{base_prefix}/boards/board-{req.storyboard_number}-{i}.png" for i in range(1, 5)]
     try:
-        frames = await asyncio.gather(*[fetch_r2_image(key) for key in frame_keys])
+        frames_task = asyncio.gather(*[fetch_r2_image(key) for key in frame_keys])
+        env_image_task = fetch_r2_image(db_data['env_image_key'])
+        
+        frames, env_image = await asyncio.gather(frames_task, env_image_task)
     except Exception as e:
-        raise ValueError(f"Failed to fetch frames: {e}")
+        raise ValueError(f"Failed to fetch frames or environment image: {e}")
 
     # 3. Fetch character images from R2 inputs/ folder
     inputs_prefix = f"{base_prefix}/inputs/"
@@ -79,6 +82,7 @@ async def process_storyboard(req: StoryboardRequest) -> BytesIO:
         None,
         storyboard_builder.build_storyboard,
         frames,
+        env_image,
         character_images,
         movie_idea,
         art_style,

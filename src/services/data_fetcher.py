@@ -78,10 +78,27 @@ class DataFetcher:
                         "dialogue": d_info.get('dialogue_text', "")
                     })
                     
+                # 4. Fetch environment info to find the 'i' for env-i.png
+                cur.execute(
+                    "SELECT scenes FROM project_environments WHERE user_email = %s AND project_id = %s ORDER BY created_at",
+                    (user_email, project_id)
+                )
+                envs_db = cur.fetchall()
+                
+                env_index = 1 # Fallback
+                for idx, env_row in enumerate(envs_db):
+                    # env_row['scenes'] is an ARRAY of integers
+                    if storyboard_number in (env_row['scenes'] or []):
+                        env_index = idx + 1
+                        break
+                
+                env_image_key = f"movie-script/{user_email}/{project_id}/boards/env-{env_index}.png"
+                    
                 return {
                     "movie_idea": movie_idea,
                     "art_style": art_style,
                     "environment": env_desc,
+                    "env_image_key": env_image_key,
                     "characters": chars_list,
                     "panels": panels
                 }

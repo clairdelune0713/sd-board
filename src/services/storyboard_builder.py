@@ -112,6 +112,7 @@ class StoryboardBuilder:
     def build_storyboard(
         self,
         frames: List[Image.Image],
+        env_image: Image.Image,
         character_images: List[Image.Image],
         movie_idea: str,
         art_style: str,
@@ -220,26 +221,49 @@ class StoryboardBuilder:
             
             built_panels.append(panel_canvas)
             
-        # --- 3. ASSEMBLE FINAL CANVAS ---
+        # --- 3. BUILD ENVIRONMENT IMAGE BLOCK ---
+        env_display_width = self.width - 2 * padding
+        env_display_height = int(env_display_width * 9 / 21)
+        resized_env = self._resize_and_pad(env_image, env_display_width, env_display_height)
+        
+        env_caption = "Note: This image is the master image (not first frame) for general idea reference (to provide a better understanding of character and object positioning). The bird's eye view is used for environment consistency."
+        
+        # --- 4. ASSEMBLE FINAL CANVAS ---
         row1_height = max(built_panels[0].height, built_panels[1].height) if len(built_panels) > 1 else built_panels[0].height
         row2_height = max(built_panels[2].height, built_panels[3].height) if len(built_panels) > 3 else (built_panels[2].height if len(built_panels) > 2 else 0)
         
-        final_height = header_height + padding + row1_height + padding + row2_height + padding
+        # Dummy draw to measure caption height
+        dummy_draw = ImageDraw.Draw(Image.new("RGB", (1, 1)))
+        caption_lines = self._wrap_text(env_caption, self.font_body, env_display_width, dummy_draw)
+        caption_height = len(caption_lines) * 45 + 20
+        
+        final_height = header_height + padding + env_display_height + 20 + caption_height + padding + row1_height + padding + row2_height + padding
         final_canvas = Image.new("RGB", (self.width, final_height), self.bg_color)
         
         final_canvas.paste(header_canvas, (0, 0))
         
+        # Paste Environment Image
+        env_y = header_height + padding
+        final_canvas.paste(resized_env, (padding, env_y))
+        
+        # Draw Caption
+        caption_y = env_y + env_display_height + 20
+        self._draw_text_wrapped(ImageDraw.Draw(final_canvas), env_caption, (padding, caption_y), self.font_body, env_display_width, fill=(180, 180, 180))
+        
+        # Start Panels after Caption
+        panels_start_y = caption_y + caption_height + padding
+        
         # Row 1
         if len(built_panels) > 0:
-            final_canvas.paste(built_panels[0], (padding, header_height + padding))
+            final_canvas.paste(built_panels[0], (padding, panels_start_y))
         if len(built_panels) > 1:
-            final_canvas.paste(built_panels[1], (padding * 2 + panel_width, header_height + padding))
+            final_canvas.paste(built_panels[1], (padding * 2 + panel_width, panels_start_y))
             
         # Row 2
         if len(built_panels) > 2:
-            final_canvas.paste(built_panels[2], (padding, header_height + padding * 2 + row1_height))
+            final_canvas.paste(built_panels[2], (padding, panels_start_y + row1_height + padding))
         if len(built_panels) > 3:
-            final_canvas.paste(built_panels[3], (padding * 2 + panel_width, header_height + padding * 2 + row1_height))
+            final_canvas.paste(built_panels[3], (padding * 2 + panel_width, panels_start_y + row1_height + padding))
             
         return final_canvas
 
