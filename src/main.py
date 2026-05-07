@@ -7,6 +7,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel
 from io import BytesIO
 import uvicorn
+from functools import partial
 
 import sys
 from pathlib import Path
@@ -27,7 +28,14 @@ class StoryboardRequest(BaseModel):
 
 async def process_storyboard(req: StoryboardRequest) -> BytesIO:
     # 1. Fetch metadata from Supabase
-    db_data = data_fetcher.fetch_storyboard_data(req.user_email, req.project, req.storyboard_number)
+    loop = asyncio.get_event_loop()
+    db_data = await loop.run_in_executor(
+        None, 
+        data_fetcher.fetch_storyboard_data, 
+        req.user_email, 
+        req.project, 
+        req.storyboard_number
+    )
     
     movie_idea = db_data['movie_idea']
     art_style = db_data['art_style']
@@ -40,8 +48,6 @@ async def process_storyboard(req: StoryboardRequest) -> BytesIO:
     bucket = config.S3_BUCKET_R2 if hasattr(config, 'S3_BUCKET_R2') else "aifx-studio"
     if not bucket:
         bucket = "aifx-studio"
-    
-    loop = asyncio.get_event_loop()
 
     # 2. Fetch frames from R2
     # aifx-studio/movie-script/{user_email}/{project}/storyboard-{sb_num}-grid-{i}.png
@@ -94,12 +100,12 @@ async def process_storyboard(req: StoryboardRequest) -> BytesIO:
 
     # 4. Save to BytesIO for response (JPEG)
     output_jpeg = BytesIO()
-    canvas.save(output_jpeg, format="JPEG", quality=90)
+    await loop.run_in_executor(None, partial(canvas.save, output_jpeg, format="JPEG", quality=90))
     output_jpeg.seek(0)
 
     # 5. Save and Upload to R2 (PNG)
     output_png = BytesIO()
-    canvas.save(output_png, format="PNG")
+    await loop.run_in_executor(None, partial(canvas.save, output_png, format="PNG"))
     png_data = output_png.getvalue()
     
     r2_key = f"movie-script/{req.user_email}/{req.project}/boards/comp-{req.storyboard_number}.png"

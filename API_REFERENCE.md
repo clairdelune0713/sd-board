@@ -14,7 +14,7 @@ By default, the server runs on:
 ### 1. Generate Storyboard
 `POST /generate-storyboard`
 
-Generates a 4K resolution storyboard image in JPEG format. The process involves:
+Generates a 4K resolution storyboard image in JPEG format. This endpoint is implemented using a **fully non-blocking asynchronous architecture**, ensuring the server remains responsive even during heavy rendering tasks. The process involves:
 1. Fetching scene metadata and dialogue from Supabase.
 2. Downloading 4 frame images and 1 environment image from Cloudflare R2.
 3. Downloading character portraits from R2.
@@ -76,3 +76,6 @@ The API expects and produces files at the following paths in the configured R2 b
 
 ### Dynamic Height
 The output image has a fixed width of **2880px**. The height is calculated dynamically based on the volume of dialogue and action text to ensure no content is clipped.
+
+### Concurrency & Performance
+The API uses a thread pool executor (`run_in_executor`) for all blocking I/O (Database) and CPU-bound (Image Processing) operations. This allows the FastAPI event loop to handle multiple concurrent requests without performance degradation or "freezing" during heavy 4K image rendering.
