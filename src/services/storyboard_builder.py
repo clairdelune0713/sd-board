@@ -147,7 +147,6 @@ class StoryboardBuilder:
         max_header_y = y
         
         if characters:
-            char_size = 300
             total_chars = len(characters)
             header_draw.text((padding, y), "Characters:", font=self.font_subtitle, fill=self.accent_color)
             
@@ -155,20 +154,16 @@ class StoryboardBuilder:
             curr_y = y - 20
             
             block_width = (self.width - curr_x - padding) // total_chars if total_chars > 0 else 0
-            max_char_y = curr_y + char_size # minimum height
+            max_char_y = curr_y + 100 # minimum height
             
             for idx, char_info in enumerate(characters):
-                if idx < len(character_images):
-                    char_img = character_images[idx]
-                    resized_char = self._resize_and_pad(char_img, char_size, char_size)
-                    header_canvas.paste(resized_char, (int(curr_x), int(curr_y)))
-                
-                text_x = curr_x + char_size + 30
+                text_x = curr_x
                 name = self._clean_text(char_info.get('name', 'Unknown'))
                 desc = self._clean_text(char_info.get('description', ''))
                 
                 header_draw.text((text_x, curr_y), name, font=self.font_body, fill=self.text_color)
-                text_y = self._draw_text_wrapped(header_draw, desc, (text_x, curr_y + 60), self.font_body, block_width - char_size - 50, fill=(200, 200, 200))
+                # Adjust wrap width to use the full block width minus some padding
+                text_y = self._draw_text_wrapped(header_draw, desc, (text_x, curr_y + 60), self.font_body, block_width - 40, fill=(200, 200, 200))
                 
                 max_char_y = max(max_char_y, text_y)
                 curr_x += block_width

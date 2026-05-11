@@ -68,16 +68,8 @@ async def process_storyboard(req: StoryboardRequest) -> BytesIO:
     except Exception as e:
         raise ValueError(f"Failed to fetch frames or environment image: {e}")
 
-    # 3. Fetch character images from R2 inputs/ folder
-    inputs_prefix = f"{base_prefix}/inputs/"
-    character_keys = await loop.run_in_executor(None, data_fetcher.list_r2_objects, bucket, inputs_prefix)
-    
+    # 3. Character images are no longer shown on the board
     character_images = []
-    if character_keys:
-        try:
-            character_images = await asyncio.gather(*[fetch_r2_image(k) for k in character_keys])
-        except Exception as e:
-            print(f"Warning: Failed to fetch character images: {e}")
 
     # 4. Use action/dialogue from DB instead of generating with Gemini
     environment = db_data.get("environment", "Unknown Environment")
