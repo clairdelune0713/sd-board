@@ -111,7 +111,39 @@ async def process_storyboard(req: StoryboardRequest) -> BytesIO:
     r2_key = f"movie-script/{req.user_email}/{req.project}/boards/comp-{req.storyboard_number}.png"
     await loop.run_in_executor(None, data_fetcher.upload_image_to_r2, bucket, r2_key, png_data, "image/png")
 
+    # 6. Trigger GDrive Sync
+    asyncio.create_task(trigger_gdrive_sync(r2_key))
+
     return output_jpeg
+
+async def trigger_gdrive_sync(object_key: str):
+    """
+    Triggers the Cloudflare GDrive Sync worker for the given R2 object key.
+    """
+    url = config.GDRIVE_SYNC_WORKER_URL
+    secret = config.GDRIVE_SYNC_WORKER_SECRET
+    
+    if not url or not secret:
+        print(f"[GDriveSync] Skipping: Missing worker configuration (URL: {!!url}, Secret: {!!secret})")
+        return
+
+    print(f"[GDriveSync] Triggering sync for {object_key}...")
+    
+    import httpx
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                url,
+                json={"objectKey": object_key},
+                headers={"X-Worker-Secret": secret},
+                timeout=10.0
+            )
+            if resp.status_code == 200:
+                print(f"[GDriveSync] Success: {resp.json()}")
+            else:
+                print(f"[GDriveSync] Failed (Status {resp.status_code}): {resp.text}")
+    except Exception as e:
+        print(f"[GDriveSync] Error triggering sync: {e}")
 
 
 @app.post("/generate-storyboard", responses={200: {"content": {"image/jpeg": {}}}})

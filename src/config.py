@@ -19,4 +19,8 @@ class Config:
     # DB Configuration
     DATABASE_URL = os.getenv("DATABASE_URL", "")
 
+    # GDrive Sync Worker
+    GDRIVE_SYNC_WORKER_URL = os.getenv("GDRIVE_SYNC_WORKER_URL", "")
+    GDRIVE_SYNC_WORKER_SECRET = os.getenv("GDRIVE_SYNC_WORKER_SECRET", "")
+
 config = Config()
