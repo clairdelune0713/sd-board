@@ -126,7 +126,7 @@ async def trigger_gdrive_sync(object_key: str):
     secret = config.GDRIVE_SYNC_WORKER_SECRET
     
     if not url or not secret:
-        print(f"[GDriveSync] Skipping: Missing worker configuration (URL: {!!url}, Secret: {!!secret})")
+        print(f"[GDriveSync] Skipping: Missing worker configuration (URL: {bool(url)}, Secret: {bool(secret)})")
         return
 
     print(f"[GDriveSync] Triggering sync for {object_key}...")
