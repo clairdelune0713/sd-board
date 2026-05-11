@@ -152,7 +152,12 @@ class DataFetcher:
             with self.get_db_connection() as conn:
                 with conn.cursor() as cur:
                     cur.execute(
-                        "INSERT INTO generated_storyboards (user_email, project_id, storyboard_number, r2_key) VALUES (%s, %s, %s, %s)",
+                        """
+                        INSERT INTO generated_storyboards (user_email, project_id, storyboard_number, r2_key) 
+                        VALUES (%s, %s, %s, %s)
+                        ON CONFLICT (user_email, project_id, storyboard_number) 
+                        DO UPDATE SET r2_key = EXCLUDED.r2_key, created_at = CURRENT_TIMESTAMP
+                        """,
                         (user_email, project_id, storyboard_number, r2_key)
                     )
                     conn.commit()
