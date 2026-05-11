@@ -146,4 +146,19 @@ class DataFetcher:
             print(f"Error uploading to {bucket}/{object_key}: {e}")
             raise
 
+    def record_generated_storyboard(self, user_email: str, project_id: str, storyboard_number: int, r2_key: str):
+        """Records the generation of a storyboard in the database."""
+        try:
+            with self.get_db_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "INSERT INTO generated_storyboards (user_email, project_id, storyboard_number, r2_key) VALUES (%s, %s, %s, %s)",
+                        (user_email, project_id, storyboard_number, r2_key)
+                    )
+                    conn.commit()
+            print(f"Successfully recorded generation for {user_email}, project {project_id}, board {storyboard_number}")
+        except Exception as e:
+            print(f"Error recording storyboard generation in DB: {e}")
+            # We don't raise here to avoid failing the whole request if DB logging fails
+
 data_fetcher = DataFetcher()

@@ -111,6 +111,16 @@ async def process_storyboard(req: StoryboardRequest) -> BytesIO:
     r2_key = f"movie-script/{req.user_email}/{req.project}/boards/comp-{req.storyboard_number}.png"
     await loop.run_in_executor(None, data_fetcher.upload_image_to_r2, bucket, r2_key, png_data, "image/png")
 
+    # 5b. Record in DB
+    await loop.run_in_executor(
+        None, 
+        data_fetcher.record_generated_storyboard, 
+        req.user_email, 
+        req.project, 
+        req.storyboard_number, 
+        r2_key
+    )
+
     # 6. Trigger GDrive Sync
     asyncio.create_task(trigger_gdrive_sync(r2_key))
 
