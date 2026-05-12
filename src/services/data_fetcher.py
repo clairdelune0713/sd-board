@@ -152,14 +152,28 @@ class DataFetcher:
             with self.get_db_connection() as conn:
                 with conn.cursor() as cur:
                     cur.execute(
-                        """
-                        INSERT INTO generated_storyboards (user_email, project_id, storyboard_number, r2_key) 
-                        VALUES (%s, %s, %s, %s)
-                        ON CONFLICT (user_email, project_id, storyboard_number) 
-                        DO UPDATE SET r2_key = EXCLUDED.r2_key, created_at = CURRENT_TIMESTAMP
-                        """,
-                        (user_email, project_id, storyboard_number, r2_key)
+                        "SELECT storyboard_number FROM generated_storyboards WHERE user_email = %s AND project_id = %s AND storyboard_number = %s",
+                        (user_email, project_id, storyboard_number)
                     )
+                    existing = cur.fetchone()
+                    
+                    if existing:
+                        cur.execute(
+                            """
+                            UPDATE generated_storyboards 
+                            SET r2_key = %s, created_at = CURRENT_TIMESTAMP 
+                            WHERE user_email = %s AND project_id = %s AND storyboard_number = %s
+                            """,
+                            (r2_key, user_email, project_id, storyboard_number)
+                        )
+                    else:
+                        cur.execute(
+                            """
+                            INSERT INTO generated_storyboards (user_email, project_id, storyboard_number, r2_key) 
+                            VALUES (%s, %s, %s, %s)
+                            """,
+                            (user_email, project_id, storyboard_number, r2_key)
+                        )
                     conn.commit()
             print(f"Successfully recorded generation for {user_email}, project {project_id}, board {storyboard_number}")
         except Exception as e:
