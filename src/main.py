@@ -37,9 +37,7 @@ async def process_storyboard(req: StoryboardRequest) -> BytesIO:
         req.storyboard_number
     )
     
-    movie_idea = db_data['movie_idea']
     art_style = db_data['art_style']
-    characters = db_data['characters']
     panels = db_data['panels']
     
     if len(panels) != 4:
@@ -61,31 +59,19 @@ async def process_storyboard(req: StoryboardRequest) -> BytesIO:
         
     frame_keys = [f"{base_prefix}/boards/board-{req.storyboard_number}-{i}.png" for i in range(1, 5)]
     try:
-        frames_task = asyncio.gather(*[fetch_r2_image(key) for key in frame_keys])
-        env_image_task = fetch_r2_image(db_data['env_image_key'])
-        
-        frames, env_image = await asyncio.gather(frames_task, env_image_task)
+        frames = await asyncio.gather(*[fetch_r2_image(key) for key in frame_keys])
     except Exception as e:
-        raise ValueError(f"Failed to fetch frames or environment image: {e}")
+        raise ValueError(f"Failed to fetch frames: {e}")
 
-    # 3. Character images are no longer shown on the board
-    character_images = []
-
-    # 4. Use action/dialogue from DB instead of generating with Gemini
-    environment = db_data.get("environment", "Unknown Environment")
+    # 3. Use action/dialogue from DB instead of generating with Gemini
     dialogues = db_data.get("panels", []) # These now contain action and dialogue from DB
 
-    # 5. Build Storyboard
+    # 4. Build Storyboard
     canvas = await loop.run_in_executor(
         None,
         storyboard_builder.build_storyboard,
         frames,
-        env_image,
-        character_images,
-        movie_idea,
         art_style,
-        environment,
-        characters,
         panels,
         dialogues
     )

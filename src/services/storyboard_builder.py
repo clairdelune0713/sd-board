@@ -115,20 +115,13 @@ class StoryboardBuilder:
     def build_storyboard(
         self,
         frames: List[Image.Image],
-        env_image: Image.Image,
-        character_images: List[Image.Image],
-        movie_idea: str,
         art_style: str,
-        environment: str,
-        characters: list,
         panel_contexts: List[dict],
         dialogues: List[dict]
     ) -> Image.Image:
         padding = 40
         # Clean input text
-        movie_idea = self._clean_text(movie_idea)
         art_style = self._clean_text(art_style)
-        environment = self._clean_text(environment)
         
         # --- 1. BUILD HEADER DYNAMICALLY ---
         header_canvas = Image.new("RGB", (self.width, 4000), (30, 30, 30))
@@ -137,38 +130,10 @@ class StoryboardBuilder:
         y = padding
         max_left_width = self.width - padding * 2
         
-        y = self._draw_text_wrapped(header_draw, f"Movie Idea: {movie_idea}", (padding, y), self.font_title, max_left_width, fill=self.text_color)
-        y += 20
-        y = self._draw_text_wrapped(header_draw, f"Art Style: {art_style}", (padding, y), self.font_subtitle, max_left_width, fill=self.accent_color)
-        y += 20
-        y = self._draw_text_wrapped(header_draw, f"Environment: {environment}", (padding, y), self.font_subtitle, max_left_width, fill=(200, 200, 200))
+        y = self._draw_text_wrapped(header_draw, f"Art Style: {art_style}", (padding, y), self.font_title, max_left_width, fill=self.accent_color)
         y += 40
         
         max_header_y = y
-        
-        if characters:
-            total_chars = len(characters)
-            header_draw.text((padding, y), "Characters:", font=self.font_subtitle, fill=self.accent_color)
-            
-            curr_x = padding + 250
-            curr_y = y - 20
-            
-            block_width = (self.width - curr_x - padding) // total_chars if total_chars > 0 else 0
-            max_char_y = curr_y + 100 # minimum height
-            
-            for idx, char_info in enumerate(characters):
-                text_x = curr_x
-                name = self._clean_text(char_info.get('name', 'Unknown'))
-                desc = self._clean_text(char_info.get('description', ''))
-                
-                header_draw.text((text_x, curr_y), name, font=self.font_body, fill=self.text_color)
-                # Adjust wrap width to use the full block width minus some padding
-                text_y = self._draw_text_wrapped(header_draw, desc, (text_x, curr_y + 60), self.font_body, block_width - 40, fill=(200, 200, 200))
-                
-                max_char_y = max(max_char_y, text_y)
-                curr_x += block_width
-                
-            max_header_y = max_char_y
             
         header_height = max_header_y + padding
         header_canvas = header_canvas.crop((0, 0, self.width, header_height))
@@ -219,37 +184,17 @@ class StoryboardBuilder:
             
             built_panels.append(panel_canvas)
             
-        # --- 3. BUILD ENVIRONMENT IMAGE BLOCK ---
-        env_display_width = self.width - 2 * padding
-        env_display_height = int(env_display_width * 9 / 21)
-        resized_env = self._resize_and_pad(env_image, env_display_width, env_display_height)
-        
-        env_caption = "Note: This image is the master image (not first frame) for general idea reference (to provide a better understanding of character and object positioning). The floor plan is used for environment consistency."
-        
-        # --- 4. ASSEMBLE FINAL CANVAS ---
+        # --- 3. ASSEMBLE FINAL CANVAS ---
         row1_height = max(built_panels[0].height, built_panels[1].height) if len(built_panels) > 1 else built_panels[0].height
         row2_height = max(built_panels[2].height, built_panels[3].height) if len(built_panels) > 3 else (built_panels[2].height if len(built_panels) > 2 else 0)
         
-        # Dummy draw to measure caption height
-        dummy_draw = ImageDraw.Draw(Image.new("RGB", (1, 1)))
-        caption_lines = self._wrap_text(env_caption, self.font_body, env_display_width, dummy_draw)
-        caption_height = len(caption_lines) * 45 + 20
-        
-        final_height = header_height + padding + env_display_height + 20 + caption_height + padding + row1_height + padding + row2_height + padding
+        final_height = header_height + padding + row1_height + padding + row2_height + padding
         final_canvas = Image.new("RGB", (self.width, final_height), self.bg_color)
         
         final_canvas.paste(header_canvas, (0, 0))
         
-        # Paste Environment Image
-        env_y = header_height + padding
-        final_canvas.paste(resized_env, (padding, env_y))
-        
-        # Draw Caption
-        caption_y = env_y + env_display_height + 20
-        self._draw_text_wrapped(ImageDraw.Draw(final_canvas), env_caption, (padding, caption_y), self.font_body, env_display_width, fill=(180, 180, 180))
-        
-        # Start Panels after Caption
-        panels_start_y = caption_y + caption_height + padding
+        # Start Panels after Header
+        panels_start_y = header_height + padding
         
         # Row 1
         if len(built_panels) > 0:
