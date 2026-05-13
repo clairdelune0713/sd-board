@@ -8,6 +8,8 @@ load_dotenv(dotenv_path=env_path)
 
 class Config:
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+    GCP_PROJECT_ID = os.getenv("GCP_PROJECT_ID", "welend-tvc-465903")
+    GCP_LOCATION = os.getenv("GCP_LOCATION", "global")
     
     # R2 configuration
     S3_ENDPOINT = os.getenv("S3_ENDPOINT", "")

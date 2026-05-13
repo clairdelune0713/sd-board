@@ -5,7 +5,11 @@ from src.config import config
 
 class DialogueGenerator:
     def __init__(self):
-        self.client = genai.Client(api_key=config.GEMINI_API_KEY)
+        self.client = genai.Client(
+            vertexai=True,
+            project=config.GCP_PROJECT_ID,
+            location=config.GCP_LOCATION
+        )
         self.model_name = 'gemini-3-flash-preview'
 
     async def generate_dialogue(
